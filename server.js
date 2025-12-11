@@ -1,40 +1,57 @@
 // server.js
 
-// 1. Tải các biến môi trường từ file .env
+// 1. Tải các biến môi trường
 require('dotenv').config(); 
 const PORT = process.env.PORT || 3000;
 
 const express = require('express');
 const http = require('http');
-const mongoose = require('mongoose');
+const { Pool } = require('pg'); // <-- Sửa: Thêm thư viện Pool của pg
 const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-// Khởi tạo Socket.io Server, chấp nhận kết nối từ mọi nguồn (*)
 const io = new Server(server, { cors: { origin: "*" } }); 
 
-// 2. Kết nối Database
-mongoose.connect(process.env.DATABASE_URL)
-  .then(() => console.log('✅ Kết nối Database thành công'))
-  .catch(err => console.error('❌ Lỗi kết nối DB:', err));
+// 2. Kết nối Database (Sử dụng Pool cho PostgreSQL)
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL, // Lấy từ file .env
+    ssl: {
+        rejectUnauthorized: false // Cấu hình SSL nếu cần thiết cho môi trường cloud
+    }
+});
+
+// Kiểm tra kết nối Database
+pool.connect()
+    .then(client => {
+        console.log('✅ Kết nối PostgreSQL thành công');
+        client.release(); // Trả kết nối về pool
+    })
+    .catch(err => console.error('❌ Lỗi kết nối PostgreSQL:', err));
 
 // 3. Middlewares (Xử lý dữ liệu)
-app.use(express.json()); // Cho phép server đọc JSON từ request body
+app.use(express.json());
 
-// 4. Khai báo Routes API
-// Gợi ý routes/adminRoutes
-const adminRoutes = require('./routes/adminRoutes'); 
-// Gợi ý routes/gameRoutes
-const gameRoutes = require('./routes/gameRoutes');
+// 4. Khai báo Routes API và Export DB Pool
+// Gán pool vào global để Controllers có thể sử dụng
+global.db = pool; 
+global.io = io;
+
+const adminRoutes = require('./routes/adminRoutes');
+const gameRoutes = require =>('./routes/gameRoutes'); 
 
 app.use('/api/admin', adminRoutes);
 app.use('/api/game', gameRoutes);
 
-// 5. Logic Socket.io (Quan trọng nhất cho game real-time)
-global.io = io; // Gán io vào global để Controller có thể dùng
+// 5. Logic Socket.io
 io.on('connection', (socket) => {
-    console.log(`Người dùng mới kết nối: ${socket.id}`);
+    // ... (logic Socket.io của bạn)
+});
+
+// 6. Khởi động Server
+server.listen(PORT, () => {
+    console.log(`🚀 Server đang chạy trên cổng ${PORT}`);
+});    console.log(`Người dùng mới kết nối: ${socket.id}`);
     
     // Lưu trữ socket ID của người dùng (quan trọng cho việc cấp tool/cấp tiền)
     // Ví dụ: userSockets.set(userId, socket.id);
