@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHA-256 / MD5 DUAL AI FIX</title>
+<style>
+    :root {
+        --green: #00ff41;
+        --blue: #00bfff;
+        --red: #ff4444;
+        --bg: #0a0a0a;
+    }
+    body {
+        margin: 0;
+        padding: 20px;
+        background: radial-gradient(circle, #001a0a 0%, #000 100%);
+        color: var(--green);
+        font-family: 'Courier New', monospace;
+        display: flex;
+        justify-content: center;
+    }
+    .container {
+        max-width: 500px;
+        width: 100%;
+        background: rgba(0, 20, 10, 0.9);
+        border: 2px solid var(--green);
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 0 25px rgba(0, 255, 65, 0.3);
+    }
+    h2 { text-align: center; text-shadow: 0 0 10px var(--green); margin-bottom: 25px; font-size: 20px; }
+    input {
+        width: 100%;
+        padding: 15px;
+        background: #000;
+        border: 1px solid var(--green);
+        color: var(--green);
+        border-radius: 8px;
+        text-align: center;
+        font-size: 14px;
+        box-sizing: border-box;
+        outline: none;
+    }
+    button {
+        width: 100%;
+        padding: 15px;
+        margin-top: 15px;
+        background: var(--green);
+        color: #000;
+        border: none;
+        font-weight: bold;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: 0.3s;
+    }
+    button:hover { background: #00cc33; box-shadow: 0 0 15px var(--green); }
+    
+    .loading {
+        display: none;
+        text-align: center;
+        margin: 20px 0;
+        letter-spacing: 2px;
+        animation: blink 1s infinite;
+    }
+    @keyframes blink { 50% { opacity: 0.3; } }
+
+    .result-box {
+        display: none;
+        margin-top: 25px;
+        padding: 20px;
+        border-top: 1px solid rgba(0, 255, 65, 0.3);
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 10px;
+        line-height: 1.8;
+    }
+    .md5-display { color: var(--blue); word-break: break-all; font-size: 12px; margin-bottom: 10px; line-height: 1.4; }
+    .pred { font-size: 18px; font-weight: bold; margin: 10px 0; padding: 8px 12px; border-radius: 5px; }
+    .tai { color: var(--green); border-left: 5px solid var(--green); background: rgba(0, 255, 65, 0.1); }
+    .xiu { color: var(--red); border-left: 5px solid var(--red); background: rgba(255, 68, 68, 0.1); }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>HỆ THỐNG PHÂN TÍCH HASH AI</h2>
+    
+    <input type="text" id="hashInput" placeholder="Dán mã MD5 (32) hoặc SHA (64) vào đây...">
+    <button onclick="analyzeAll()">BẮT ĐẦU PHÂN TÍCH</button>
+
+    <div id="loading" class="loading">ĐANG GIẢI MÃ DỮ LIỆU...</div>
+
+    <div id="result" class="result-box">
+        <div class="md5-display">MÃ GỐC: <span id="resHash"></span></div>
+        <hr style="opacity: 0.2">
+        <div id="pred1" class="pred">DỰ ĐOÁN 1: </div>
+        <div id="pred2" class="pred">DỰ ĐOÁN 2: </div>
+    </div>
+</div>
+
+<script>
+function analyzeAll() {
+    const hashInput = document.getElementById("hashInput");
+    const hash = hashInput.value.trim().toLowerCase();
+    const resultBox = document.getElementById("result");
+    const loading = document.getElementById("loading");
+
+    // Kiểm tra tính hợp lệ
+    if(!/^[a-f0-9]{32}$/.test(hash) && !/^[a-f0-9]{64}$/.test(hash)) {
+        alert("Mã không hợp lệ! Vui lòng nhập đúng 32 hoặc 64 ký tự hex.");
+        return;
+    }
+
+    // Hiệu ứng chờ
+    loading.style.display = "block";
+    resultBox.style.display = "none";
+
+    setTimeout(() => {
+        const len = hash.length;
+
+        // --- Thuật toán 1: Heuristic Mod ---
+        let s = 0;
+        let h = 0;
+        for(let i = 0; i < len; i++) {
+            let v = parseInt(hash[i], 16);
+            s += v; 
+            if(v >= 8) h++;
+        }
+        let score1 = (s / (len * 15)) * 0.5 + (h / len) * 0.5;
+        let res1 = score1 > 0.5 ? "TÀI" : "XỈU";
+
+        // --- Thuật toán 2: Quantum Parity Mod ---
+        let bitCount = 0;
+        for(let char of hash) {
+            let val = parseInt(char, 16);
+            bitCount += (val & 1) + ((val >> 1) & 1) + ((val >> 2) & 1) + ((val >> 3) & 1);
+        }
+        let res2 = (bitCount % 2 === 1) ? "TÀI" : "XỈU";
+
+        // Hiển thị kết quả
+        document.getElementById("resHash").innerText = hash;
+        
+        const p1 = document.getElementById("pred1");
+        p1.innerText = "DỰ ĐOÁN 1: " + res1;
+        p1.className = "pred " + (res1 === "TÀI" ? "tai" : "xiu");
+
+        const p2 = document.getElementById("pred2");
+        p2.innerText = "DỰ ĐOÁN 2: " + res2;
+        p2.className = "pred " + (res2 === "TÀI" ? "tai" : "xiu");
+
+        loading.style.display = "none";
+        resultBox.style.display = "block";
+    }, 800);
+}
+</script>
+
+</body>
+</html>
